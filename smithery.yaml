@@ -1,0 +1,34 @@
+# Smithery server descriptor: https://smithery.ai/docs/build/project-config
+# This is a remote (HTTP) MCP server. Smithery proxies requests from its
+# users to our Railway-hosted endpoint with the user-supplied API key.
+runtime: remote
+startCommand:
+  type: http
+  url: https://mcp-grantiq-api-production.up.railway.app/mcp
+  configSchema:
+    type: object
+    required: [apiKey]
+    properties:
+      apiKey:
+        type: string
+        title: API Key
+        description: "Use 'grantiq-dev-key-001' for the free tier (50 calls/day) or mint your own at https://mcp.grantiq.us/admin/keys."
+        default: grantiq-dev-key-001
+  exampleConfig:
+    apiKey: grantiq-dev-key-001
+  headerMappings:
+    apiKey: X-API-Key
+metadata:
+  name: GrantIQ MCP
+  description: "Search US federal grants and contracts (Grants.gov + SAM.gov) from any LLM."
+  homepage: https://mcp.grantiq.us
+  repository: https://github.com/bch1212/mcp-grantiq
+  tools:
+    - search_grants
+    - get_grant_details
+    - search_contracts
+    - get_contract_details
+    - match_opportunities
+    - get_agencies
+    - get_deadlines
+    - search_awards
