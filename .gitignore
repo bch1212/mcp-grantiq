@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+pytest-cache-files-*/
+.venv/
+.env
+*.db
+.railway/

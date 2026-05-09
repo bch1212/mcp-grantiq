@@ -1,0 +1,5 @@
+# Let nixpacks auto-detect Python + pip from requirements.txt; we only override
+# the start command. Railway exec's startCommand without a shell so $PORT won't
+# expand — server.py reads PORT via os.getenv() and starts uvicorn itself.
+[start]
+cmd = "python server.py"
