@@ -6,12 +6,31 @@
     "url": "https://github.com/bch1212/mcp-grantiq",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "websiteUrl": "https://mcp.grantiq.us",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@grantiq/mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GRANTIQ_API_KEY",
+          "description": "GrantIQ API key (free dev key `grantiq-dev-key-001` or mint via /admin/keys).",
+          "isRequired": true,
+          "isSecret": true,
+          "default": "grantiq-dev-key-001"
+        }
+      ]
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp-grantiq-api-production.up.railway.app/mcp",
+      "url": "https://mcp.grantiq.us/mcp",
       "headers": [
         {
           "name": "X-API-Key",

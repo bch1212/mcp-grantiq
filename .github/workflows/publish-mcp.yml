@@ -1,4 +1,4 @@
-name: Publish to Anthropic MCP Registry
+name: Publish to npm + Anthropic MCP Registry
 
 on:
   push:
@@ -11,9 +11,44 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # id-token: write enables (a) npm trusted-publisher OIDC auth on `npm publish`,
+      # and (b) the OIDC token exchange against the MCP Registry below.
       id-token: write
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Validate server.json basics
+        run: |
+          test -s server.json
+          jq -e '.name and .version and (.description | length <= 100)' server.json
+
+      - name: Install + build npm package
+        working-directory: packages/grantiq-mcp
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: Publish to npm via Trusted Publisher (OIDC, no token)
+        working-directory: packages/grantiq-mcp
+        # No NODE_AUTH_TOKEN — relies on the package's configured Trusted
+        # Publisher (npmjs.com → @grantiq/mcp settings → bch1212/mcp-grantiq +
+        # this workflow filename). Provenance is auto-emitted by npm under
+        # trusted publishing; the --provenance flag is harmless if kept.
+        run: npm publish --provenance --access public
+
+      - name: Wait for npm to index the new version
+        run: |
+          for i in $(seq 1 12); do
+            ver=$(curl -sS "https://registry.npmjs.org/@grantiq%2Fmcp" | jq -r '."dist-tags".latest // empty')
+            if [ -n "$ver" ]; then echo "npm latest: $ver"; exit 0; fi
+            sleep 5
+          done
+          echo "npm did not index within 60s — continuing anyway"
 
       - name: Get GitHub Actions OIDC token (registry audience)
         id: oidc
@@ -21,9 +56,7 @@ jobs:
           token=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://registry.modelcontextprotocol.io" \
             | jq -r '.value')
-          if [ -z "$token" ] || [ "$token" = "null" ]; then
-            echo "Failed to obtain OIDC token"; exit 1
-          fi
+          if [ -z "$token" ] || [ "$token" = "null" ]; then echo "Failed to obtain OIDC token"; exit 1; fi
           echo "::add-mask::$token"
           echo "oidc_token=$token" >> "$GITHUB_OUTPUT"
 
@@ -34,7 +67,7 @@ jobs:
             -H "content-type: application/json" \
             -d "{\"oidc_token\":\"${{ steps.oidc.outputs.oidc_token }}\"}")
           tok=$(echo "$resp" | jq -r '.token // .registry_token // empty')
-          if [ -z "$tok" ]; then echo "No registry token"; echo "$resp"; exit 1; fi
+          if [ -z "$tok" ]; then echo "No registry token: $resp"; exit 1; fi
           echo "::add-mask::$tok"
           echo "registry_token=$tok" >> "$GITHUB_OUTPUT"
 
@@ -44,5 +77,10 @@ jobs:
             -H "Authorization: Bearer ${{ steps.exchange.outputs.registry_token }}" \
             -H "content-type: application/json" \
             --data @server.json)
-          echo "publish response: $resp"
-          echo "$resp" | jq -e '.id // .name' > /dev/null
+          echo "publish resp: $resp"
+          if echo "$resp" | grep -qiE '"status":\s*[45]'; then
+            if echo "$resp" | grep -qi "already\|duplicate"; then
+              echo "Already published — idempotent, ok"; exit 0
+            fi
+            exit 1
+          fi
