@@ -33,13 +33,18 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Publish to npm via Trusted Publisher (OIDC, no token)
+      - name: Publish to npm (Trusted Publisher OIDC, NPM_TOKEN fallback)
         working-directory: packages/grantiq-mcp
-        # No NODE_AUTH_TOKEN — relies on the package's configured Trusted
-        # Publisher (npmjs.com → grantiq-mcp settings → bch1212/mcp-grantiq +
-        # this workflow filename). Provenance is auto-emitted by npm under
-        # trusted publishing; the --provenance flag is harmless if kept.
+        # Preferred path: npm Trusted Publisher (configured at npmjs.com →
+        # grantiq-mcp settings → bch1212/mcp-grantiq + this workflow filename).
+        # OIDC handshake happens automatically because of `id-token: write`.
+        # Fallback path: NODE_AUTH_TOKEN. Needed for the very first publish
+        # because Trusted Publisher rules can only be configured AFTER the
+        # package exists — set repo secret NPM_TOKEN once, run, then it can
+        # be deleted and trusted publishing takes over for v1.0.1+.
         run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Wait for npm to index the new version
         run: |
