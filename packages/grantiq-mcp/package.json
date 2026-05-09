@@ -1,7 +1,7 @@
 {
-  "name": "@grantiq/mcp",
+  "name": "grantiq-mcp",
   "version": "1.0.0",
-  "description": "Stdio → remote bridge for GrantIQ MCP (US grants + federal contracts).",
+  "description": "Stdio \u2192 remote bridge for GrantIQ MCP (US grants + federal contracts).",
   "license": "MIT",
   "type": "module",
   "mcpName": "io.github.bch1212/mcp-grantiq",
@@ -12,11 +12,22 @@
     "directory": "packages/grantiq-mcp"
   },
   "bugs": "https://github.com/bch1212/mcp-grantiq/issues",
-  "keywords": ["mcp", "mcp-server", "model-context-protocol", "grants", "sam-gov", "grants-gov", "ai-agents"],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "grants",
+    "sam-gov",
+    "grants-gov",
+    "ai-agents"
+  ],
   "bin": {
     "grantiq-mcp": "dist/cli.js"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build"
