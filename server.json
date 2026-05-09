@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.bch1212/mcp-grantiq",
+  "description": "Search US grants + federal contracts (Grants.gov + SAM.gov) from any LLM.",
+  "repository": {
+    "url": "https://github.com/bch1212/mcp-grantiq",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "websiteUrl": "https://mcp.grantiq.us",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp-grantiq-api-production.up.railway.app/mcp",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "description": "API key (free tier `grantiq-dev-key-001` or mint via /admin/keys).",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
