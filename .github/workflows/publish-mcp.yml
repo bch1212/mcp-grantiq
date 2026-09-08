@@ -1,4 +1,4 @@
-name: Publish to npm + Anthropic MCP Registry
+name: Publish remote server to MCP Registry
 
 on:
   push:
@@ -11,49 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # id-token: write enables (a) npm trusted-publisher OIDC auth on `npm publish`,
-      # and (b) the OIDC token exchange against the MCP Registry below.
+      # id-token: write enables the OIDC token exchange against the MCP Registry below.
       id-token: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
-
       - name: Validate server.json basics
         run: |
           test -s server.json
-          jq -e '.name and .version and (.description | length <= 100)' server.json
-
-      - name: Install + build npm package
-        working-directory: packages/grantiq-mcp
-        run: |
-          npm install --no-audit --no-fund
-          npm run build
-
-      - name: Publish to npm (Trusted Publisher OIDC, NPM_TOKEN fallback)
-        working-directory: packages/grantiq-mcp
-        # Preferred path: npm Trusted Publisher (configured at npmjs.com →
-        # grantiq-mcp settings → bch1212/mcp-grantiq + this workflow filename).
-        # OIDC handshake happens automatically because of `id-token: write`.
-        # Fallback path: NODE_AUTH_TOKEN. Needed for the very first publish
-        # because Trusted Publisher rules can only be configured AFTER the
-        # package exists — set repo secret NPM_TOKEN once, run, then it can
-        # be deleted and trusted publishing takes over for v1.0.1+.
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Wait for npm to index the new version
-        run: |
-          for i in $(seq 1 12); do
-            ver=$(curl -sS "https://registry.npmjs.org/grantiq-mcp" | jq -r '."dist-tags".latest // empty')
-            if [ -n "$ver" ]; then echo "npm latest: $ver"; exit 0; fi
-            sleep 5
-          done
-          echo "npm did not index within 60s — continuing anyway"
+          jq -e '.name and .version and (.description | length <= 100) and (.remotes | length > 0)' server.json
 
       - name: Get GitHub Actions OIDC token (registry audience)
         id: oidc
