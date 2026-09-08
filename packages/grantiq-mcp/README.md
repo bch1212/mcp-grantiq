@@ -12,5 +12,5 @@ For most clients you can skip this package entirely and connect to the
 remote URL directly:
 
 ```bash
-claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp
+claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/
 ```
