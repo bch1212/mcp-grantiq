@@ -1,6 +1,6 @@
 {
   "name": "grantiq-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Stdio \u2192 remote bridge for GrantIQ MCP (US grants + federal contracts).",
   "license": "MIT",
   "type": "module",

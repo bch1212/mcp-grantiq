@@ -2,7 +2,7 @@
 
 **A paid MCP server that gives AI agents instant, structured access to every open US federal grant and contract opportunity.** Backed by Grants.gov + SAM.gov, with 24-hour SQLite caching, per-key daily limits, and a Stripe-friendly upgrade hook.
 
-`https://mcp-grantiq.up.railway.app/mcp`
+`https://mcp.grantiq.us/mcp/`
 
 ---
 
@@ -31,7 +31,7 @@ Built for procurement copilots, grant-finder agents, and B2G sales tools, GrantI
 ## Install
 
 ```bash
-claude mcp add grantiq-mcp --url https://mcp-grantiq.up.railway.app/mcp
+claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/
 ```
 
 Then add the API key Claude should use:
@@ -83,49 +83,49 @@ The MCP endpoint speaks the JSON-RPC streamable-HTTP protocol and is best used t
 
 ```bash
 # Search grants
-curl -s https://mcp-grantiq.up.railway.app/tools/search_grants \
+curl -s https://mcp.grantiq.us/tools/search_grants \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"keyword":"renewable energy","limit":5}'
 
 # Get grant details
-curl -s https://mcp-grantiq.up.railway.app/tools/get_grant_details \
+curl -s https://mcp.grantiq.us/tools/get_grant_details \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"opportunity_id":"345678"}'
 
 # Search SAM.gov contracts (cyber, small-business set-aside)
-curl -s https://mcp-grantiq.up.railway.app/tools/search_contracts \
+curl -s https://mcp.grantiq.us/tools/search_contracts \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"keyword":"cybersecurity","set_aside":"SBA","limit":5}'
 
 # Get contract details
-curl -s https://mcp-grantiq.up.railway.app/tools/get_contract_details \
+curl -s https://mcp.grantiq.us/tools/get_contract_details \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"notice_id":"abc123"}'
 
 # Match opportunities to an org profile
-curl -s https://mcp-grantiq.up.railway.app/tools/match_opportunities \
+curl -s https://mcp.grantiq.us/tools/match_opportunities \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"org_description":"Battery storage R&D startup","org_type":"for-profit","focus_areas":["energy","battery","storage"]}'
 
 # Top agencies right now
-curl -s https://mcp-grantiq.up.railway.app/tools/get_agencies \
+curl -s https://mcp.grantiq.us/tools/get_agencies \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"type":"both"}'
 
 # Deadlines in the next 14 days
-curl -s https://mcp-grantiq.up.railway.app/tools/get_deadlines \
+curl -s https://mcp.grantiq.us/tools/get_deadlines \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"days_ahead":14}'
 
 # Past award history
-curl -s https://mcp-grantiq.up.railway.app/tools/search_awards \
+curl -s https://mcp.grantiq.us/tools/search_awards \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: grantiq-dev-key-001' \
   -d '{"recipient_name":"Acme Corp","year":2025}'
@@ -138,7 +138,7 @@ curl -s https://mcp-grantiq.up.railway.app/tools/search_awards \
 Mint a fresh key (free or pro):
 
 ```bash
-curl -s https://mcp-grantiq.up.railway.app/admin/keys \
+curl -s https://mcp.grantiq.us/admin/keys \
   -H 'X-Admin-Token: $GRANTIQ_ADMIN_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{"tier":"free","daily_limit":50}'
@@ -147,7 +147,7 @@ curl -s https://mcp-grantiq.up.railway.app/admin/keys \
 Promote a free key to pro (called from the Stripe checkout success webhook):
 
 ```bash
-curl -s https://mcp-grantiq.up.railway.app/billing/upgrade \
+curl -s https://mcp.grantiq.us/billing/upgrade \
   -H 'X-Admin-Token: $GRANTIQ_ADMIN_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{"key":"grantiq_xxxxx"}'

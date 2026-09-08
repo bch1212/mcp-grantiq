@@ -6,13 +6,13 @@
     "url": "https://github.com/bch1212/mcp-grantiq",
     "source": "github"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "websiteUrl": "https://mcp.grantiq.us",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "grantiq-mcp",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "transport": {
         "type": "stdio"
       },
@@ -30,7 +30,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.grantiq.us/mcp",
+      "url": "https://mcp.grantiq.us/mcp/",
       "headers": [
         {
           "name": "X-API-Key",

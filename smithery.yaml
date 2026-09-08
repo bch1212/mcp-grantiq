@@ -4,7 +4,7 @@
 runtime: remote
 startCommand:
   type: http
-  url: https://mcp-grantiq-api-production.up.railway.app/mcp
+  url: https://mcp.grantiq.us/mcp/
   configSchema:
     type: object
     required: [apiKey]
