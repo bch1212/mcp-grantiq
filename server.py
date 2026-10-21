@@ -26,10 +26,11 @@ from fastmcp.server.middleware import Middleware, MiddlewareContext
 
 from db.cache import init_cache
 from db.keys import (
-    DEV_KEY,
+    AdminConfigError,
     admin_token,
     check_and_increment,
     create_key,
+    dev_key,
     init_keys,
     upgrade_to_pro,
 )
@@ -242,9 +243,14 @@ mcp_app = mcp.http_app(path="/")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail closed before serving if the admin token is not configured.
+    admin_token()
     init_cache()
     init_keys()
-    log.info("GrantIQ MCP starting; dev key seeded as %s", DEV_KEY)
+    if dev_key():
+        log.info("GrantIQ MCP starting; seeded a key from GRANTIQ_DEV_KEY")
+    else:
+        log.info("GrantIQ MCP starting")
     async with mcp_app.lifespan(app):
         yield
 
@@ -371,14 +377,30 @@ async def rest_search_awards(
 
 
 # --- Admin endpoints --------------------------------------------------------
+def _require_admin(x_admin_token: Optional[str]) -> None:
+    """Reject admin calls when the token is unset or does not match.
+
+    A missing GRANTIQ_ADMIN_TOKEN is a configuration error (503), not an
+    authentication miss, so the process cannot fall open on a known default.
+    """
+    try:
+        expected = admin_token()
+    except AdminConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    supplied = x_admin_token or ""
+    if not supplied or not secrets.compare_digest(
+        supplied.encode("utf-8"), expected.encode("utf-8")
+    ):
+        raise HTTPException(status_code=401, detail="Invalid admin token")
+
+
 @app.post("/admin/keys")
 async def mint_key(
     payload: dict,
     x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
 ):
     """Mint a new API key. Body: {"tier": "free|pro", "daily_limit": int?}"""
-    if not x_admin_token or x_admin_token != admin_token():
-        raise HTTPException(status_code=401, detail="Invalid admin token")
+    _require_admin(x_admin_token)
     tier = payload.get("tier", "free")
     daily_limit = int(payload.get("daily_limit", 50))
     new_key = "grantiq_" + secrets.token_urlsafe(24)
@@ -392,8 +414,7 @@ async def billing_upgrade(
     x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
 ):
     """Promote a key to the pro tier. Called by the Stripe success webhook."""
-    if not x_admin_token or x_admin_token != admin_token():
-        raise HTTPException(status_code=401, detail="Invalid admin token")
+    _require_admin(x_admin_token)
     key = payload.get("key")
     if not key:
         raise HTTPException(status_code=400, detail="key is required")

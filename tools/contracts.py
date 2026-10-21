@@ -1,7 +1,7 @@
 """SAM.gov wrapper for federal contract opportunities + award history.
 
-API key passed via the SAM_API_KEY env var (falls back to the dev key
-in the build prompt).
+The API key is read from the SAM_API_KEY environment variable. There is
+no baked-in default; contract calls fail closed when it is missing.
 """
 
 from __future__ import annotations
@@ -17,11 +17,12 @@ from db.cache import cache_get, cache_set, make_key
 SAM_OPPS_URL = "https://api.sam.gov/opportunities/v2/search"
 SAM_AWARDS_URL = "https://api.sam.gov/prod/federalcontractopportunities/v1/api/search"
 DEFAULT_TIMEOUT = 25.0
-DEFAULT_API_KEY = "SAM-4b2f823c-bfd2-4555-bafb-b527e9e48058"
 
 
-def _api_key() -> str:
-    return os.getenv("SAM_API_KEY", DEFAULT_API_KEY)
+def _api_key() -> Optional[str]:
+    """Return SAM_API_KEY, or None when it is missing or blank."""
+    key = (os.getenv("SAM_API_KEY") or "").strip()
+    return key or None
 
 
 def _ok(data: Any, cached: bool = False) -> dict:
@@ -30,6 +31,15 @@ def _ok(data: Any, cached: bool = False) -> dict:
 
 def _err(message: str) -> dict:
     return {"success": False, "error": message}
+
+
+def _upstream_error(prefix: str, exc: BaseException) -> dict:
+    """Build an error payload without echoing the SAM API key."""
+    detail = str(exc)
+    key = _api_key()
+    if key and key in detail:
+        detail = detail.replace(key, "[redacted]")
+    return _err(f"{prefix}: {detail}")
 
 
 def _date_window(days_back: int = 90) -> tuple[str, str]:
@@ -61,9 +71,13 @@ async def search_contracts_impl(
     if cached is not None:
         return _ok(cached, cached=True)
 
+    api_key = _api_key()
+    if not api_key:
+        return _err("SAM_API_KEY is not set")
+
     posted_from, posted_to = _date_window(90)
     params = {
-        "api_key": _api_key(),
+        "api_key": api_key,
         "limit": min(max(limit, 1), 100),
         "postedFrom": posted_from,
         "postedTo": posted_to,
@@ -83,9 +97,9 @@ async def search_contracts_impl(
             resp.raise_for_status()
             body = resp.json()
     except httpx.HTTPError as exc:
-        return _err(f"SAM.gov request failed: {exc!s}")
+        return _upstream_error("SAM.gov request failed", exc)
     except ValueError as exc:
-        return _err(f"SAM.gov returned non-JSON response: {exc!s}")
+        return _upstream_error("SAM.gov returned non-JSON response", exc)
 
     raw_hits = body.get("opportunitiesData") or []
     hits = []
@@ -119,9 +133,13 @@ async def get_contract_details_impl(notice_id: str) -> dict:
     if cached is not None:
         return _ok(cached, cached=True)
 
+    api_key = _api_key()
+    if not api_key:
+        return _err("SAM_API_KEY is not set")
+
     posted_from, posted_to = _date_window(365)
     params = {
-        "api_key": _api_key(),
+        "api_key": api_key,
         "limit": 1,
         "noticeid": notice_id,
         "postedFrom": posted_from,
@@ -133,9 +151,9 @@ async def get_contract_details_impl(notice_id: str) -> dict:
             resp.raise_for_status()
             body = resp.json()
     except httpx.HTTPError as exc:
-        return _err(f"SAM.gov request failed: {exc!s}")
+        return _upstream_error("SAM.gov request failed", exc)
     except ValueError as exc:
-        return _err(f"SAM.gov returned non-JSON response: {exc!s}")
+        return _upstream_error("SAM.gov returned non-JSON response", exc)
 
     hits = body.get("opportunitiesData") or []
     if not hits:
@@ -169,8 +187,12 @@ async def search_awards_impl(
     else:
         posted_from, posted_to = _date_window(365)
 
+    api_key = _api_key()
+    if not api_key:
+        return _err("SAM_API_KEY is not set")
+
     params: dict[str, Any] = {
-        "api_key": _api_key(),
+        "api_key": api_key,
         "limit": 25,
         "postedFrom": posted_from,
         "postedTo": posted_to,
@@ -187,7 +209,7 @@ async def search_awards_impl(
             resp.raise_for_status()
             body = resp.json()
     except httpx.HTTPError as exc:
-        return _err(f"SAM.gov request failed: {exc!s}")
+        return _upstream_error("SAM.gov request failed", exc)
 
     awards = []
     for hit in body.get("opportunitiesData") or []:

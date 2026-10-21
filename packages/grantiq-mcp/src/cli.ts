@@ -3,11 +3,11 @@
  * GrantIQ MCP — local stdio bridge to the hosted remote server.
  *
  * Usage:
- *   GRANTIQ_API_KEY=grantiq-dev-key-001 npx grantiq-mcp
+ *   GRANTIQ_API_KEY=your-api-key npx grantiq-mcp
  *
  * The bridge forwards every stdio MCP request to https://mcp.grantiq.us/mcp/
- * with an `X-API-Key` header attached. Free dev key gives 50 calls/day; mint
- * a higher-limit key with `curl -X POST https://mcp.grantiq.us/admin/keys`.
+ * with an `X-API-Key` header attached. GRANTIQ_API_KEY is required; mint a
+ * key with `curl -X POST https://mcp.grantiq.us/admin/keys`.
  */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -15,7 +15,13 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 const REMOTE_URL = process.env.GRANTIQ_REMOTE_URL ?? "https://mcp.grantiq.us/mcp/";
-const API_KEY = process.env.GRANTIQ_API_KEY ?? "grantiq-dev-key-001";
+const API_KEY = (process.env.GRANTIQ_API_KEY || "").trim();
+if (!API_KEY) {
+  process.stderr.write(
+    "GRANTIQ_API_KEY is not set. Refusing to start.\n"
+  );
+  process.exit(1);
+}
 
 async function main() {
   const remote = new Client({ name: "grantiq-mcp-bridge", version: "1.0.0" });

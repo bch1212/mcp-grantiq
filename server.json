@@ -15,7 +15,7 @@
       "headers": [
         {
           "name": "X-API-Key",
-          "description": "API key (free tier `grantiq-dev-key-001` or mint via /admin/keys).",
+          "description": "API key. Mint one via /admin/keys. There is no shared key.",
           "isRequired": true,
           "isSecret": true
         }

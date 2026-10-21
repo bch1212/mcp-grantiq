@@ -13,6 +13,7 @@ import pytest
 import respx
 
 from db import keys as keys_db
+from db.cache import db_cursor
 from tools.contracts import (
     SAM_OPPS_URL,
     get_contract_details_impl,
@@ -29,7 +30,7 @@ from tools.grants import (
 )
 from tools.matching import match_opportunities_impl
 
-DEV_KEY = keys_db.DEV_KEY
+DEV_KEY = "test-dev-key"
 
 
 # --- helpers ----------------------------------------------------------------
@@ -417,3 +418,88 @@ def test_billing_upgrade_promotes_key(client):
     assert r.status_code == 200
     assert r.json()["tier"] == "pro"
     assert keys_db.get_key(minted["key"]).is_pro
+
+
+# --- 6. fail closed ---------------------------------------------------------
+def test_retired_shared_dev_key_is_removed(monkeypatch):
+    import hashlib
+
+    retired = "local-stand-in-key"
+    keys_db.create_key(retired)
+    keys_db.create_key("keep-me")
+    monkeypatch.setattr(
+        keys_db,
+        "_RETIRED_DEV_KEY_SHA256",
+        hashlib.sha256(retired.encode("utf-8")).hexdigest(),
+    )
+    keys_db.init_keys()
+    assert keys_db.get_key(retired) is None
+    assert keys_db.get_key("keep-me") is not None
+
+
+def test_no_dev_key_seeded_without_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("GRANTIQ_DB_PATH", str(tmp_path / "fresh.db"))
+    monkeypatch.delenv("GRANTIQ_DEV_KEY", raising=False)
+    from db.cache import init_cache
+
+    init_cache()
+    keys_db.init_keys()
+    with db_cursor() as cur:
+        count = cur.execute("SELECT COUNT(*) AS n FROM api_keys").fetchone()["n"]
+    assert count == 0
+
+
+def test_admin_token_fails_closed_when_missing(monkeypatch):
+    monkeypatch.delenv("GRANTIQ_ADMIN_TOKEN", raising=False)
+    with pytest.raises(keys_db.AdminConfigError, match="GRANTIQ_ADMIN_TOKEN"):
+        keys_db.admin_token()
+
+
+def test_admin_token_fails_closed_when_blank(monkeypatch):
+    monkeypatch.setenv("GRANTIQ_ADMIN_TOKEN", "   ")
+    with pytest.raises(keys_db.AdminConfigError, match="GRANTIQ_ADMIN_TOKEN"):
+        keys_db.admin_token()
+
+
+def test_admin_token_rejects_published_placeholder(monkeypatch):
+    monkeypatch.setenv("GRANTIQ_ADMIN_TOKEN", "your-admin-token")
+    with pytest.raises(keys_db.AdminConfigError, match="GRANTIQ_ADMIN_TOKEN"):
+        keys_db.admin_token()
+
+
+@pytest.mark.parametrize(
+    "path,payload",
+    [
+        ("/admin/keys", {"tier": "free"}),
+        ("/billing/upgrade", {"key": "missing"}),
+    ],
+)
+def test_admin_routes_fail_closed_when_token_missing(client, monkeypatch, path, payload):
+    monkeypatch.delenv("GRANTIQ_ADMIN_TOKEN", raising=False)
+    response = client.post(
+        path,
+        json=payload,
+        headers={"X-Admin-Token": "test-admin-token"},
+    )
+    assert response.status_code == 503
+    assert "GRANTIQ_ADMIN_TOKEN" in response.json()["error"]
+
+
+def test_app_refuses_to_start_without_admin_token(monkeypatch, tmp_path):
+    monkeypatch.setenv("GRANTIQ_DB_PATH", str(tmp_path / "nostart.db"))
+    monkeypatch.delenv("GRANTIQ_ADMIN_TOKEN", raising=False)
+    from fastapi.testclient import TestClient
+
+    import server
+
+    with pytest.raises(keys_db.AdminConfigError, match="GRANTIQ_ADMIN_TOKEN"):
+        with TestClient(server.app):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_search_contracts_requires_sam_api_key(monkeypatch):
+    monkeypatch.delenv("SAM_API_KEY", raising=False)
+    resp = await search_contracts_impl(keyword="cyber", limit=5)
+    assert resp["success"] is False
+    assert resp["error"] == "SAM_API_KEY is not set"

@@ -5,7 +5,7 @@ require a stdio launcher (e.g. some Claude Desktop install flows) talk
 to the remote `https://mcp.grantiq.us/mcp/` endpoint.
 
 ```bash
-GRANTIQ_API_KEY=grantiq-dev-key-001 npx -y @grantiq/mcp
+GRANTIQ_API_KEY=your-api-key npx -y @grantiq/mcp
 ```
 
 For most clients you can skip this package entirely and connect to the

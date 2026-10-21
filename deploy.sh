@@ -19,8 +19,13 @@ fi
 set -a; source "$SECRETS"; set +a
 
 # Railway CLI rejects when both vars are set — see Brett's memory note.
+# Accept either name from the secrets file, then keep only RAILWAY_API_TOKEN.
+if [[ -z "${RAILWAY_API_TOKEN:-}" && -z "${RAILWAY_TOKEN:-}" ]]; then
+  echo "ERROR: RAILWAY_API_TOKEN is not set. Refusing to deploy." >&2
+  exit 1
+fi
+export RAILWAY_API_TOKEN="${RAILWAY_API_TOKEN:-$RAILWAY_TOKEN}"
 unset RAILWAY_TOKEN
-export RAILWAY_API_TOKEN="${RAILWAY_API_TOKEN:-${RAILWAY_TOKEN:-fb2dc2af-ba63-4a43-81da-2d75e9477060}}"
 
 if ! command -v railway >/dev/null; then
   echo "Installing Railway CLI..."
@@ -30,16 +35,26 @@ fi
 cd "$HERE"
 
 PROJECT_NAME="mcp-grantiq"
-ADMIN_TOKEN="${GRANTIQ_ADMIN_TOKEN:-$(openssl rand -hex 32)}"
+# Never deploy the published placeholder. Generate a token when one is not set.
+if [[ -z "${GRANTIQ_ADMIN_TOKEN:-}" || "$GRANTIQ_ADMIN_TOKEN" == "your-admin-token" || "$GRANTIQ_ADMIN_TOKEN" == "replace-with-strong-random" ]]; then
+  ADMIN_TOKEN="$(openssl rand -hex 32)"
+else
+  ADMIN_TOKEN="$GRANTIQ_ADMIN_TOKEN"
+fi
 
 echo "==> Initializing Railway project ($PROJECT_NAME)"
 if [[ ! -f .railway/project.json ]]; then
   railway init --name "$PROJECT_NAME" || true
 fi
 
+if [[ -z "${SAM_API_KEY:-}" || "$SAM_API_KEY" == "your-key-here" ]]; then
+  echo "ERROR: SAM_API_KEY is not set. Refusing to deploy." >&2
+  exit 1
+fi
+
 echo "==> Setting service env vars"
 railway variables \
-  --set "SAM_API_KEY=${SAM_API_KEY:-SAM-4b2f823c-bfd2-4555-bafb-b527e9e48058}" \
+  --set "SAM_API_KEY=$SAM_API_KEY" \
   --set "GRANTIQ_ADMIN_TOKEN=$ADMIN_TOKEN" \
   --set "GRANTIQ_DB_PATH=/data/grantiq.db" \
   --set "LOG_LEVEL=INFO"
