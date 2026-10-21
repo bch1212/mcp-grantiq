@@ -37,10 +37,10 @@ claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/
 Then add the API key Claude should use:
 
 ```bash
-claude mcp env grantiq-mcp X-API-Key=grantiq-dev-key-001
+claude mcp env grantiq-mcp X-API-Key=your-api-key
 ```
 
-The dev key `grantiq-dev-key-001` is seeded automatically and capped at 50 calls/day. Mint your own with the admin endpoint below.
+There is no shared public key. Mint one with the admin endpoint below (free tier is 50 calls/day) and store it in the client config or an environment variable.
 
 ---
 
@@ -85,49 +85,49 @@ The MCP endpoint speaks the JSON-RPC streamable-HTTP protocol and is best used t
 # Search grants
 curl -s https://mcp.grantiq.us/tools/search_grants \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"keyword":"renewable energy","limit":5}'
 
 # Get grant details
 curl -s https://mcp.grantiq.us/tools/get_grant_details \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"opportunity_id":"345678"}'
 
 # Search SAM.gov contracts (cyber, small-business set-aside)
 curl -s https://mcp.grantiq.us/tools/search_contracts \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"keyword":"cybersecurity","set_aside":"SBA","limit":5}'
 
 # Get contract details
 curl -s https://mcp.grantiq.us/tools/get_contract_details \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"notice_id":"abc123"}'
 
 # Match opportunities to an org profile
 curl -s https://mcp.grantiq.us/tools/match_opportunities \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"org_description":"Battery storage R&D startup","org_type":"for-profit","focus_areas":["energy","battery","storage"]}'
 
 # Top agencies right now
 curl -s https://mcp.grantiq.us/tools/get_agencies \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"type":"both"}'
 
 # Deadlines in the next 14 days
 curl -s https://mcp.grantiq.us/tools/get_deadlines \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"days_ahead":14}'
 
 # Past award history
 curl -s https://mcp.grantiq.us/tools/search_awards \
   -H 'Content-Type: application/json' \
-  -H 'X-API-Key: grantiq-dev-key-001' \
+  -H 'X-API-Key: your-api-key' \
   -d '{"recipient_name":"Acme Corp","year":2025}'
 ```
 
@@ -161,8 +161,11 @@ curl -s https://mcp.grantiq.us/billing/upgrade \
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+# Replace the placeholders, then export them. The process refuses to start
+# until GRANTIQ_ADMIN_TOKEN is a real value (not the example placeholder).
+set -a && source .env && set +a
 python server.py        # http://localhost:8000
-pytest -v               # 22 tests, hermetic with respx mocks
+pytest -v               # 31 tests, hermetic with respx mocks
 ```
 
 ---
@@ -173,8 +176,8 @@ The repo includes `nixpacks.toml`. After `railway init`, just `railway up`. The 
 
 Set these on the Railway service:
 
-- `SAM_API_KEY` — your SAM.gov key
-- `GRANTIQ_ADMIN_TOKEN` — long random string
+- `SAM_API_KEY` — your SAM.gov key (contract tools fail closed without it)
+- `GRANTIQ_ADMIN_TOKEN` — long random string, required at startup
 - `GRANTIQ_DB_PATH` — `/data/grantiq.db` if you mount a Volume (recommended so cache + keys survive deploys)
 
 A ready-to-run `deploy.sh` is in this directory.

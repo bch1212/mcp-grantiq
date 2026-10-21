@@ -4,12 +4,13 @@ Tiers:
 - free: capped at `daily_limit` calls/day (50 by default).
 - pro:  unlimited.
 
-The dev key `grantiq-dev-key-001` is seeded on startup so that
-agents can probe the server without registering.
+If GRANTIQ_DEV_KEY is set, that key is seeded on startup for local use.
+There is no hardcoded shared key and no default admin token.
 """
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 from dataclasses import dataclass
@@ -18,8 +19,21 @@ from typing import Optional
 
 from db.cache import _connect, db_cursor
 
-DEV_KEY = "grantiq-dev-key-001"
 FREE_DAILY_LIMIT = 50
+
+# Digest of the shared dev key that used to be published in this repo.
+# Startup deletes a matching row so an existing database does not keep it.
+_RETIRED_DEV_KEY_SHA256 = "20a43b4f6889e8227c562ad1dc95484d13fa4a88f008d00fc238a8a5895d7a1d"
+
+
+class AdminConfigError(RuntimeError):
+    """GRANTIQ_ADMIN_TOKEN is missing or blank."""
+
+
+def dev_key() -> Optional[str]:
+    """Optional local key from GRANTIQ_DEV_KEY. Empty means do not seed one."""
+    key = (os.getenv("GRANTIQ_DEV_KEY") or "").strip()
+    return key or None
 
 
 @dataclass
@@ -37,7 +51,7 @@ class KeyRecord:
 
 
 def init_keys() -> None:
-    """Create the keys table and seed the default dev key."""
+    """Create the keys table and seed GRANTIQ_DEV_KEY when it is set."""
     with db_cursor() as cur:
         cur.execute(
             """
@@ -51,9 +65,28 @@ def init_keys() -> None:
             )
             """
         )
-    # Seed dev key (idempotent).
-    if get_key(DEV_KEY) is None:
-        create_key(DEV_KEY, tier="free", daily_limit=FREE_DAILY_LIMIT)
+    _retire_published_dev_key()
+    # Seed an optional local key (idempotent). Never a hardcoded default.
+    key = dev_key()
+    if key and _is_retired_dev_key(key):
+        key = None
+    if key and get_key(key) is None:
+        create_key(key, tier="free", daily_limit=FREE_DAILY_LIMIT)
+
+
+def _is_retired_dev_key(key: str) -> bool:
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return digest == _RETIRED_DEV_KEY_SHA256
+
+
+def _retire_published_dev_key() -> None:
+    """Drop the previously published shared dev key if a database still has it."""
+    with db_cursor() as cur:
+        rows = cur.execute("SELECT key FROM api_keys").fetchall()
+        for row in rows:
+            key = row["key"]
+            if _is_retired_dev_key(key):
+                cur.execute("DELETE FROM api_keys WHERE key = ?", (key,))
 
 
 def _today_utc() -> str:
@@ -152,5 +185,15 @@ def reset_call_count(key: str) -> None:
 
 
 def admin_token() -> str:
-    """Token required to mint new keys via the admin endpoint."""
-    return os.getenv("GRANTIQ_ADMIN_TOKEN", "change-me-in-prod")
+    """Token required to mint new keys via the admin endpoint.
+
+    Missing or blank configuration is an error. There is no default, so
+    startup and admin routes fail closed instead of accepting a known value.
+    """
+    token = (os.getenv("GRANTIQ_ADMIN_TOKEN") or "").strip()
+    # The example file publishes these placeholders. They must not authenticate.
+    if not token or token in {"your-admin-token", "replace-with-strong-random"}:
+        raise AdminConfigError(
+            "GRANTIQ_ADMIN_TOKEN must be set to a private value. Refusing admin operations."
+        )
+    return token

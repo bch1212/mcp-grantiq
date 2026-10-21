@@ -4,5 +4,15 @@ __pycache__/
 pytest-cache-files-*/
 .venv/
 .env
+.env.*
+!.env.example
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+data/
 .railway/
+.deploy-secrets.env

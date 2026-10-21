@@ -12,10 +12,9 @@ startCommand:
       apiKey:
         type: string
         title: API Key
-        description: "Use 'grantiq-dev-key-001' for the free tier (50 calls/day) or mint your own at https://mcp.grantiq.us/admin/keys."
-        default: grantiq-dev-key-001
+        description: "Your GrantIQ API key. Mint one via /admin/keys. There is no shared key."
   exampleConfig:
-    apiKey: grantiq-dev-key-001
+    apiKey: your-api-key
   headerMappings:
     apiKey: X-API-Key
 metadata:

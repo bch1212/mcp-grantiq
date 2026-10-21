@@ -22,6 +22,7 @@ def isolated_db(tmp_path, monkeypatch):
     db_path = tmp_path / "grantiq-test.db"
     monkeypatch.setenv("GRANTIQ_DB_PATH", str(db_path))
     monkeypatch.setenv("GRANTIQ_ADMIN_TOKEN", "test-admin-token")
+    monkeypatch.setenv("GRANTIQ_DEV_KEY", "test-dev-key")
     monkeypatch.setenv("SAM_API_KEY", "TEST-SAM-KEY")
     # init schemas for every test
     from db.cache import init_cache

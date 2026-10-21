@@ -12,7 +12,7 @@ Builder voice. Problem-first. Honest caveats. Brett ships when ready.
 **Body:**
 GrantIQ MCP is a paid Model Context Protocol server that lets any LLM search every open Grants.gov opportunity and SAM.gov contract through one normalized JSON interface. Eight tools cover keyword search, agency rollups, deadline radar, NAICS-coded contract discovery, and a deterministic matcher that scores opportunities against an org profile. Responses are cached in SQLite for 24h so repeat queries don't burn the upstream rate limits.
 
-Free tier is 50 calls/day, no signup — just `claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/` and use the seeded dev key. Pro is $19/mo for unlimited. The `/billing/upgrade` endpoint flips a key to pro tier with one webhook so Stripe integration is mechanical.
+Free tier is 50 calls/day. Add the server with `claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/` and send an API key you mint from the admin endpoint. Pro is $19/mo for unlimited. The `/billing/upgrade` endpoint flips a key to pro tier with one webhook so Stripe integration is mechanical.
 
 What's interesting to me: most "agent + government data" demos I've seen treat scraping as the hard part. The hard part is normalization across the two main sources (Grants.gov is a JSON-RPC-ish POST API, SAM.gov is REST + key-gated, deadlines and amounts come back in different shapes), plus billing in a way that doesn't need a dashboard. This collapses both into 8 typed tools.
 
@@ -32,7 +32,7 @@ I kept hitting the same wall building grant-finder agents — every prompt ended
 claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/
 ```
 
-Free tier dev key is `grantiq-dev-key-001` — 50 calls/day. Tools:
+Free tier is 50 calls/day. Mint an API key and send it as `X-API-Key` (there is no shared key). Tools:
 - search_grants / get_grant_details
 - search_contracts / get_contract_details
 - match_opportunities (org profile → top 10 ranked)
@@ -94,7 +94,7 @@ Repo: https://github.com/bch1212/mcp-grantiq — feedback welcome.
 **Tagline:** US federal grants + contracts for any AI agent
 
 **Description:**
-GrantIQ MCP is a paid Model Context Protocol server that lets any LLM search live US federal grants (Grants.gov) and contract opportunities (SAM.gov) through 8 normalized tools. Free tier is 50 calls/day with a seeded dev key — `claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/` and your agent has government funding data on tap. $19/mo for unlimited or $0.02/call.
+GrantIQ MCP is a paid Model Context Protocol server that lets any LLM search live US federal grants (Grants.gov) and contract opportunities (SAM.gov) through 8 normalized tools. Free tier is 50 calls/day. Mint an API key, then `claude mcp add grantiq-mcp --url https://mcp.grantiq.us/mcp/` and your agent has government funding data on tap. $19/mo for unlimited or $0.02/call.
 
 **Maker comment:**
 Hi PH. I built GrantIQ MCP because every B2G agent demo I've seen breaks at the data layer. Grants.gov and SAM.gov each have their own quirks; this collapses both into one agent-friendly surface with caching, rate limits, and a Stripe-friendly upgrade path. The match_opportunities tool is the most fun to play with — feed it an org description and focus areas and it ranks the top 10 grants + contracts deterministically. Open to all feedback.
